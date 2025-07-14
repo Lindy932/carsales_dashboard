@@ -1,5 +1,19 @@
-# Car Sales Dataset Advanced Visualization Dashboard
+# 🚖  Car Sales Dataset Advanced Visualization Dashboard
 
+This academic project is a multi-part interactive dashboard series that explores car sales trends and customer behavior. Using real-world-style data, I built a set of web-based tools to help users better understand patterns in vehicle features, buyer preferences, and market trends.
+
+Each lab builds on the previous one, starting with simple charts and growing into full dashboards with dynamic filters, clustering, and linked visualizations. These tools are designed to help users ask deeper questions and get quick, visual answers from the data—whether they’re marketing teams, analysts, or business leaders.
+
+### What I did: 
+- Turn raw data into clear, useful visuals
+
+- Build interactive dashboards using web tools like D3.js
+
+- Use data analysis techniques like clustering and trend exploration
+
+- Make complex information easy to explore for any user
+
+---
 
 
 ### 🚗 **Lab 1 – Exploratory Car Sales Dashboard: Basic Categorical & Numerical Analysis**
