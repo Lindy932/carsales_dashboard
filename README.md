@@ -29,6 +29,7 @@ Each lab builds on the previous one, starting with simple charts and growing int
 ---
 
 ### 📌 **Lab 3 – K-Means Clustering Dashboard with Dynamic Filtering**
+- Developed a coordinated dashboard where clicking on a specific category in a bar chart assigns a unique legend color and highlights matching data points across all other charts. This interactivity helps users quickly spot trends, compare clusters, and better understand how variables relate to one another in a connected view.
 
 - Designed an interactive clustering tool using K-Means to segment car buyers and vehicle preferences. Integrated adjustable cluster counts and real-time filtering based on key variables (e.g., price, horsepower, MPG). Visualized cluster separation via scatterplots and centroids to support data-driven marketing strategies and customer segmentation.
 
