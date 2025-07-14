@@ -1,0 +1,158 @@
+<!DOCTYPE html>
+<html>
+<head>
+   <meta charset="utf-8">
+   <title>Correlation Matrix</title>
+   <script src="https://d3js.org/d3.v7.min.js"></script>
+   <style>
+        body {
+            font-family: Arial, sans-serif;
+            text-align: center;
+        }
+        .h1{
+            text-align: center;
+        }
+       .cell {
+           width: 30px;
+           height: 30px;
+           text-align: center;
+           font-size: 12px;
+           color: white;
+       }
+       .negative {
+           background-color: blue;
+       }
+       .positive {
+           background-color: red;
+       }
+       .legend {
+           font-size: 12px;
+       }
+       .wrapper {
+           display: flex;
+           justify-content: center;
+           align-items: flex-start;
+           gap: 20px; /* add space between graph and legend */
+       }
+   </style>
+</head>
+<body>
+    <h1>Correlation Matrix</h1>
+   <script>
+       d3.csv('correlation_matrix.csv').then(function(data) {
+           let attributes = data.columns.slice(1).map(attr => attr.substring(0, 4));
+           let matrix = [];
+
+
+           data.forEach(function(row, i) {
+               matrix[i] = [];
+               attributes.forEach(function(attr, j) {
+                   let value = +row[data.columns[j + 1]];
+                   matrix[i][j] = { value: value, positive: value > 0 };
+               });
+           });
+
+
+           let wrapper = d3.select('body')
+               .append('div')
+               .attr('class', 'wrapper');
+
+
+           let table = wrapper.append('table')
+               .style('border-collapse', 'collapse');
+
+
+           // add column labels
+           let header = table.append('tr')
+               .selectAll('th')
+               .data([''].concat(attributes))
+               .enter()
+               .append('th')
+               .text(function(d) { return d; })
+               .style('text-align', 'center');
+
+
+           let rows = table.selectAll('tr.row')
+               .data(matrix)
+               .enter()
+               .append('tr')
+               .attr('class', 'row');
+
+
+           // add row labels
+           rows.append('th')
+               .text(function(d, i) { return attributes[i]; })
+               .style('text-align', 'center');
+
+
+           let cells = rows.selectAll('td')
+               .data(function(d) { return d; })
+               .enter()
+               .append('td')
+               .attr('class', function(d) { return d.positive ? 'cell positive' : 'cell negative'; })
+               .style('background-color', function(d) { return d.positive ? 'red' : 'blue'; })
+               .style('opacity', function(d) { return Math.abs(d.value); })
+               .text(function(d) { return d.value.toFixed(2); });
+
+
+           // add gradient legend next to the table
+           let legendSvg = wrapper.append('svg')
+               .attr('width', 50)
+               .attr('height', 300);
+
+           //Legend source code from copilot
+           let defs = legendSvg.append('defs');
+           let linearGradient = defs.append('linearGradient')
+               .attr('id', 'linear-gradient')
+               .attr('x1', '0%')
+               .attr('y1', '0%')
+               .attr('x2', '0%')
+               .attr('y2', '100%');
+
+
+           linearGradient.selectAll('stop')
+               .data([
+                   { offset: '0%', color: 'red' },
+                   { offset: '50%', color: 'white' },
+                   { offset: '100%', color: 'blue' }
+               ])
+               .enter().append('stop')
+               .attr('offset', function(d) { return d.offset; })
+               .attr('stop-color', function(d) { return d.color; });
+
+
+           legendSvg.append('rect')
+               .attr('x', 0)
+               .attr('y', 0)
+               .attr('width', 20)
+               .attr('height', 300)
+               .style('fill', 'url(#linear-gradient)');
+
+
+           legendSvg.append('text')
+               .attr('x', 25)
+               .attr('y', 10)
+               .attr('text-anchor', 'start')
+               .text('1');
+
+
+           legendSvg.append('text')
+               .attr('x', 25)
+               .attr('y', 150)
+               .attr('text-anchor', 'start')
+               .text('0');
+
+
+           legendSvg.append('text')
+               .attr('x', 25)
+               .attr('y', 290)
+               .attr('text-anchor', 'start')
+               .text('-1');
+       });
+   </script>
+
+
+</head>
+<body>
+</body>
+</html>

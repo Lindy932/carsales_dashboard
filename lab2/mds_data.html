@@ -1,0 +1,107 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>MDS Display of The Data</title>
+    <script src="https://d3js.org/d3.v6.min.js"></script>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            text-align: center;
+        }
+        .axis text {
+            font-size: 12px;
+        }
+        .axis line,
+        .axis path {
+            shape-rendering: crispEdges;
+            stroke: #000;
+            fill: none;
+        }
+        .dot {
+            fill: purple;
+            stroke: white;
+            stroke-width: 1px;
+            fill-opacity: 0.7;
+        }
+        .label {
+            fill: black; 
+            font-size: 10px; 
+            text-anchor: middle; 
+        }
+    </style>
+</head>
+<body>
+    <h1>MDS Display of the Data Points</h1>
+    <svg width="800" height="600"></svg>
+    <script>
+        d3.csv("mds_data.csv").then(function(data) {
+            var margin = {top: 20, right: 40, bottom: 70, left: 70},
+                width = 800 - margin.left - margin.right,
+                height = 600 - margin.top - margin.bottom;
+
+            var x = d3.scaleLinear().range([0, width]),
+                y = d3.scaleLinear().range([height, 0]);
+
+            var xAxis = d3.axisBottom(x),
+                yAxis = d3.axisLeft(y);
+
+            var svg = d3.select("svg")
+                .attr("width", width + margin.left + margin.right)
+                .attr("height", height + margin.top + margin.bottom)
+              .append("g")
+                .attr("transform", "translate(" + margin.left + "," + margin.top + ")");
+
+            x.domain(d3.extent(data, function(d) { return +d.Dim1; })).nice();
+            y.domain(d3.extent(data, function(d) { return +d.Dim2; })).nice();
+
+            // add the x-axis label
+            svg.append("g")
+                .attr("class", "x axis")
+                .attr("transform", "translate(0," + height + ")")
+                .call(xAxis)
+              .append("text")
+                .attr("class", "label")
+                .attr("x", width / 2)
+                .attr("y", 50)
+                .style("text-anchor", "middle") //make it show up 
+                .text("Dimension 1");
+
+            // add y-axis label
+            svg.append("g")
+                .attr("class", "y axis")
+                .call(yAxis)
+              .append("text")
+                .attr("class", "label")
+                .attr("transform", "rotate(-90)")
+                .attr("x", -height / 2)
+                .attr("y", -50)
+                .attr("dy", ".71em")
+                .style("text-anchor", "middle")
+                .text("Dimension 2");
+
+            // add data points
+            svg.selectAll(".dot")
+                .data(data)
+              .enter().append("circle")
+                .attr("class", "dot")
+                .attr("r", 3.5)
+                .attr("cx", function(d) { return x(d.Dim1); })
+                .attr("cy", function(d) { return y(d.Dim2); })
+                .style("fill", "purple");
+
+            // Add labels for data points
+            svg.selectAll(".label")
+                .data(data)
+              .enter().append("text")
+                .attr("class", "label")
+                .attr("x", function(d) { return x(d.Dim1); })
+                .attr("y", function(d) { return y(d.Dim2) - 5; }) // Positioning above the points
+                .text(function(d) { return d.Label; }); // Use your column name for labels
+        }).catch(function(error) {
+            console.error('Error loading or processing data:', error);
+        });
+    </script>
+</body>
+</html>
+

@@ -1,0 +1,134 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Scatter Plot Matrix 7x7</title>
+    <script src="https://d3js.org/d3.v6.min.js"></script>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+        }
+        h1{
+            text-align: center;
+        }
+        .scatterplot-matrix {
+            display: block;
+            margin: auto;
+        }
+        .axis {
+            font-size: 10px;
+        }
+        .dot {
+            fill: purple;
+            fill-opacity: 0.6;
+            stroke: #ffffff;
+            stroke-width: 1px;
+        }
+        .frame {
+            fill: none;
+            stroke: #ccc;
+        }
+        .scatter-axis-label {
+            font-size: 12px;
+            text-anchor: middle;
+        }
+    </style>
+</head>
+<body>
+    <h1>Scatter Plot Matrix 7x7</h1>
+    <svg class="scatterplot-matrix" width="620" height="620"></svg>
+    <script>
+        d3.csv("scatter_data_with_categorical.csv").then(function(data) {
+            console.log(data);  
+
+            var size = 140, padding = 1;
+            var columns = Object.keys(data[0]);
+            var n = columns.length;
+
+            var x = {}, y = {};
+            columns.forEach(function(col) {
+                x[col] = d3.scaleLinear()
+                    .domain(d3.extent(data, function(d) { return +d[col]; }))
+                    .range([padding / 2, size - padding / 2]);
+
+                y[col] = d3.scaleLinear()
+                    .domain(d3.extent(data, function(d) { return +d[col]; }))
+                    .range([size - padding / 2, padding / 2]);
+            });
+
+            var svg = d3.select("svg")
+                .attr("width", size * n + padding)
+                .attr("height", size * n + padding)
+              .append("g")
+                .attr("transform", "translate(" + padding + "," + padding / 2 + ")");
+
+                svg.selectAll(".x.axis")
+                .data(columns)
+              .enter().append("g")
+                .attr("class", "x axis")
+                .attr("transform", function(d, i) { return "translate(" + (n - i - 1) * size + ",0)"; })
+                .each(function(d) { d3.select(this).call(d3.axisBottom(x[d])); });
+
+            svg.selectAll(".y.axis")
+                .data(columns)
+              .enter().append("g")
+                .attr("class", "y axis")
+                .attr("transform", function(d, i) { return "translate(0," + i * size + ")"; })
+                .each(function(d) { d3.select(this).call(d3.axisLeft(y[d])); });
+
+            var cell = svg.selectAll(".cell")
+                .data(cross(columns, columns))
+              .enter().append("g")
+                .attr("class", "cell")
+                .attr("transform", function(d) { return "translate(" + (n - d.i - 1) * size + "," + d.j * size + ")"; })
+                .each(plot);
+
+            function plot(p) {
+                var cell = d3.select(this);
+
+                cell.append("rect")
+                    .attr("class", "frame")
+                    .attr("x", padding / 2)
+                    .attr("y", padding / 2)
+                    .attr("width", size - padding)
+                    .attr("height", size - padding);
+
+                cell.selectAll(".dot")
+                    .data(data)
+                  .enter().append("circle")
+                    .attr("class", "dot")
+                    .attr("cx", function(d) { return x[p.x](d[p.x]); })
+                    .attr("cy", function(d) { return y[p.y](d[p.y]); })
+                    .attr("r", 3.5);
+            }
+
+            function cross(a, b) {
+                var c = [], n = a.length, m = b.length;
+                for (var i = -1; ++i < n;) for (var j = -1; ++j < m;) c.push({x: a[i], i: i, y: b[j], j: j});
+                return c;
+            }
+
+            // add axis labels
+            svg.selectAll('.x-label')
+                .data(columns)
+              .enter().append('text')
+                .attr('class', 'scatter-axis-label')
+                .attr('x', (d, i) => (n - i - 1) * size + size / 2 + padding)
+                .attr('y', size * n + padding)
+                .text(d => d);
+
+            svg.selectAll('.y-label')
+                .data(columns)
+              .enter().append('text')
+                .attr('class', 'scatter-axis-label')
+                .attr('transform', 'rotate(-90)')
+                .attr('x', -(size * n / 2))
+                .attr('y', (d, i) => i * size + padding)
+                .attr('dy', '.35em')
+                .text(d => d);
+        }).catch(function(error) {
+            console.error('Error loading or processing data:', error);
+        });
+    </script>
+</body>
+</html>

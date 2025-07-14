@@ -1,0 +1,157 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Biplot</title>
+    <script src="https://d3js.org/d3.v6.min.js"></script>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            text-align: center;
+        }
+        .axis text {
+            font-size: 12px;
+        }
+        .axis line,
+        .axis path {
+            shape-rendering: crispEdges;
+            stroke: #000;
+            fill: none;
+        }
+        .dot {
+            fill: purple;
+            stroke: white;
+            stroke-width: 1px;
+            fill-opacity: 0.7;
+        }
+        .arrow {
+            stroke-width: 2px; 
+        }
+        .label {
+            fill: black; 
+            font-size: 10px; 
+        }
+        .legend {
+            margin-top: 20px; /* spacing between the graph and the legend */
+            text-align: left; 
+            display: inline-block;
+        }
+        .legend-item {
+            display: flex;
+            align-items: center; /* Center items vertically */
+        }
+        .color-box {
+            width: 12px;
+            height: 12px;
+            margin-right: 8px; /* Space between the color box and text */
+        }
+    </style>
+</head>
+<body>
+    <h1>Biplot</h1>
+    <svg width="800" height="600"></svg>
+    <div class="legend"></div> <!-- Legend container -->
+    <script>
+        //Promise.all was a source code from ChatGpt.com for Biplot legend and projected axes to show up
+        Promise.all([
+            d3.csv("biplot_scores.csv"),
+            d3.csv("biplot_loadings.csv")
+        ]).then(function(data) {
+            var scores = data[0],
+                loadings = data[1];
+
+            var margin = {top: 40, right: 30, bottom: 60, left: 50},
+                width = 800 - margin.left - margin.right,
+                height = 600 - margin.top - margin.bottom;
+
+            var x = d3.scaleLinear().range([0, width]),
+                y = d3.scaleLinear().range([height, 0]);
+
+            var xAxis = d3.axisBottom(x),
+                yAxis = d3.axisLeft(y);
+
+            var color = d3.scaleOrdinal(d3.schemeCategory10);  // color scale for projected axes
+
+            var svg = d3.select("svg")
+                .attr("width", width + margin.left + margin.right)
+                .attr("height", height + margin.top + margin.bottom)
+              .append("g")
+                .attr("transform", "translate(" + margin.left + "," + margin.top + ")");
+
+            x.domain(d3.extent(scores, function(d) { return +d.PC1; })).nice();
+            y.domain(d3.extent(scores, function(d) { return +d.PC2; })).nice();
+
+            // add points
+            svg.append("g")
+                .selectAll(".dot")
+                .data(scores)
+              .enter().append("circle")
+                .attr("class", "dot")
+                .attr("r", 3.5)
+                .attr("cx", function(d) { return x(d.PC1); })
+                .attr("cy", function(d) { return y(d.PC2); });
+
+            // add x axis
+            svg.append("g")
+                .attr("class", "x axis")
+                .attr("transform", "translate(0," + height + ")")
+                .call(xAxis)
+              .append("text")
+                .attr("class", "label")
+                .attr("x", width / 2)
+                .attr("y", 40)
+                .style("text-anchor", "middle")
+                .text("Principal Component 1");
+
+            // Add y axis
+            svg.append("g")
+                .attr("class", "y axis")
+                .call(yAxis)
+              .append("text")
+                .attr("class", "label")
+                .attr("transform", "rotate(-90)")
+                .attr("x", -height / 2)
+                .attr("y", -40)
+                .attr("dy", ".71em")
+                .style("text-anchor", "middle")
+                .text("Principal Component 2");
+
+            // add arrows 
+            svg.append("g")
+                .selectAll(".arrow")
+                .data(loadings)
+              .enter().append("line")
+                .attr("class", "arrow")
+                .attr("x1", x(0))
+                .attr("y1", y(0))
+                .attr("x2", function(d) { return x(d.PC1 * width / 2); })
+                .attr("y2", function(d) { return y(d.PC2 * height / 2); })
+                .style("stroke", function(d, i) { return color(i); });  // Color coding based on index
+
+            // add labels
+            svg.append("g")
+                .selectAll(".label")
+                .data(loadings)
+              .enter().append("text")
+                .attr("class", "label")
+                .attr("x", function(d) { return x(d.PC1 * width / 2) + (d.PC1 > 0 ? 5 : -5); })
+                .attr("y", function(d) { return y(d.PC2 * height / 2) + (d.PC2 > 0 ? -5 : 5); })
+                .attr("dy", ".35em")
+                .text(function(d) { return d.variable; });
+
+            // Add legend below the graph
+            var legend = d3.select(".legend");
+            loadings.forEach(function(d, i) {
+                var legendItem = legend.append("div").attr("class", "legend-item");
+                legendItem.append("div")
+                    .attr("class", "color-box")
+                    .style("background-color", color(i));
+                legendItem.append("span").text(d.variable); // Correctly fetch and display variable names
+            });
+
+        }).catch(function(error) {
+            console.error('Error loading or processing data:', error);
+        });
+    </script>
+</body>
+</html>

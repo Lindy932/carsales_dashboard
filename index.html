@@ -1,0 +1,298 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>📊 Advanced Data Science Dashboards</title>
+  <style>
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+
+    body {
+      font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+      min-height: 100vh;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 20px;
+      position: relative;
+      overflow-x: hidden;
+    }
+
+    /* Animated background particles */
+    .particle {
+      position: absolute;
+      width: 4px;
+      height: 4px;
+      background: rgba(255, 255, 255, 0.1);
+      border-radius: 50%;
+      animation: float 6s ease-in-out infinite;
+    }
+
+    @keyframes float {
+      0%, 100% { transform: translateY(0px) translateX(0px); }
+      50% { transform: translateY(-20px) translateX(10px); }
+    }
+
+    .container {
+      max-width: 600px;
+      width: 100%;
+      background: rgba(255, 255, 255, 0.1);
+      backdrop-filter: blur(20px);
+      border-radius: 20px;
+      padding: 40px;
+      box-shadow: 0 25px 50px rgba(0, 0, 0, 0.2);
+      border: 1px solid rgba(255, 255, 255, 0.2);
+      text-align: center;
+      position: relative;
+      z-index: 1;
+    }
+
+    h1 {
+      font-size: 2.8em;
+      color: white;
+      margin-bottom: 10px;
+      text-shadow: 0 2px 10px rgba(0, 0, 0, 0.3);
+      font-weight: 700;
+    }
+
+    .subtitle {
+      color: rgba(255, 255, 255, 0.9);
+      font-size: 1.1em;
+      margin-bottom: 40px;
+      font-weight: 300;
+    }
+
+    .projects-grid {
+      display: flex;
+      flex-direction: column;
+      gap: 20px;
+      align-items: center;
+    }
+
+    .project-card {
+      width: 100%;
+      max-width: 450px;
+      background: rgba(255, 255, 255, 0.15);
+      backdrop-filter: blur(10px);
+      border-radius: 15px;
+      border: 1px solid rgba(255, 255, 255, 0.2);
+      padding: 25px;
+      text-decoration: none;
+      color: white;
+      transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+      position: relative;
+      overflow: hidden;
+    }
+
+    .project-card::before {
+      content: '';
+      position: absolute;
+      top: 0;
+      left: -100%;
+      width: 100%;
+      height: 100%;
+      background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.1), transparent);
+      transition: left 0.5s;
+    }
+
+    .project-card:hover::before {
+      left: 100%;
+    }
+
+    .project-card:hover {
+      transform: translateY(-5px) scale(1.02);
+      box-shadow: 0 20px 40px rgba(0, 0, 0, 0.3);
+      background: rgba(255, 255, 255, 0.25);
+    }
+
+    .project-card:active {
+      transform: translateY(-2px) scale(1.01);
+    }
+
+    .project-icon {
+      font-size: 2.5em;
+      margin-bottom: 15px;
+      display: block;
+      filter: drop-shadow(0 2px 4px rgba(0, 0, 0, 0.3));
+    }
+
+    .project-title {
+      font-size: 1.4em;
+      font-weight: 600;
+      margin-bottom: 10px;
+      text-shadow: 0 1px 3px rgba(0, 0, 0, 0.3);
+    }
+
+    .project-description {
+      font-size: 0.9em;
+      color: rgba(255, 255, 255, 0.8);
+      line-height: 1.5;
+      font-weight: 300;
+    }
+
+    .tech-tags {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px;
+      margin-top: 15px;
+      justify-content: center;
+    }
+
+    .tag {
+      background: rgba(255, 255, 255, 0.2);
+      color: white;
+      padding: 4px 12px;
+      border-radius: 20px;
+      font-size: 0.8em;
+      font-weight: 500;
+      border: 1px solid rgba(255, 255, 255, 0.3);
+    }
+
+    @media (max-width: 768px) {
+      .container {
+        padding: 30px 20px;
+      }
+      
+      h1 {
+        font-size: 2.2em;
+      }
+      
+      .project-card {
+        padding: 20px;
+      }
+    }
+
+    /* Pulse animation for enhanced interactivity */
+    @keyframes pulse {
+      0% { box-shadow: 0 0 0 0 rgba(255, 255, 255, 0.4); }
+      70% { box-shadow: 0 0 0 10px rgba(255, 255, 255, 0); }
+      100% { box-shadow: 0 0 0 0 rgba(255, 255, 255, 0); }
+    }
+
+    .project-card:focus {
+      outline: none;
+      animation: pulse 1.5s infinite;
+    }
+  </style>
+</head>
+<body>
+  <!-- Animated background particles -->
+  <div class="particle" style="top: 20%; left: 10%; animation-delay: 0s;"></div>
+  <div class="particle" style="top: 80%; left: 20%; animation-delay: 1s;"></div>
+  <div class="particle" style="top: 40%; left: 80%; animation-delay: 2s;"></div>
+  <div class="particle" style="top: 60%; left: 90%; animation-delay: 3s;"></div>
+  <div class="particle" style="top: 10%; left: 70%; animation-delay: 4s;"></div>
+  <div class="particle" style="top: 90%; left: 60%; animation-delay: 5s;"></div>
+
+  <div class="container">
+    <h1>📊 Advanced Data Science Dashboards</h1>
+    <p class="subtitle">Explore interactive visualizations and advanced analytics</p>
+    
+    <div class="projects-grid">
+      <a href="lab1/index.html" class="project-card">
+        <span class="project-icon">🚗</span>
+        <div class="project-title">Exploratory Car Sales Dashboard</div>
+        <div class="project-description">
+          Interactive web dashboard using D3.js to explore relationships between car sales variables through scatterplots, bar charts, and histograms with dropdown filters and tooltips
+        </div>
+        <div class="tech-tags">
+          <span class="tag">D3.js</span>
+          <span class="tag">Scatterplot</span>
+          <span class="tag">Bar Chart</span>
+          <span class="tag">EDA</span>
+        </div>
+      </a>
+
+      <a href="lab2/index.html" class="project-card">
+        <span class="project-icon">📊</span>
+        <div class="project-title">Multivariate Analytics Suite</div>
+        <div class="project-description">
+          Advanced analytical interface featuring correlation matrices, scatterplot matrices, parallel coordinates, PCA with scree plots & biplots, and MDS displays for dimensionality reduction
+        </div>
+        <div class="tech-tags">
+          <span class="tag">PCA & Biplot</span>
+          <span class="tag">MDS</span>
+          <span class="tag">Correlation Matrix</span>
+          <span class="tag">Parallel Coordinates</span>
+        </div>
+      </a>
+
+      <a href="lab3/index.html" class="project-card">
+        <span class="project-icon">📌</span>
+        <div class="project-title">K-Means Clustering Dashboard</div>
+        <div class="project-description">
+          Interactive clustering tool with adjustable cluster counts and real-time filtering. Visualizes cluster separation and centroids to support customer segmentation and marketing strategies
+        </div>
+        <div class="tech-tags">
+          <span class="tag">K-Means</span>
+          <span class="tag">Clustering</span>
+          <span class="tag">Real-time Filtering</span>
+          <span class="tag">Segmentation</span>
+        </div>
+      </a>
+
+      <a href="lab4/index.html" class="project-card">
+        <span class="project-icon">📈</span>
+        <div class="project-title">Linked Dashboard Suite</div>
+        <div class="project-description">
+          Interconnected dashboard with four synchronized visualizations featuring dynamic linking where filter changes automatically update all coordinated multiple views
+        </div>
+        <div class="tech-tags">
+          <span class="tag">Coordinated Views</span>
+          <span class="tag">Dynamic Linking</span>
+          <span class="tag">Multi-viz</span>
+          <span class="tag">Interactive Filters</span>
+        </div>
+      </a>
+    </div>
+  </div>
+
+  <script>
+    // Add smooth scroll behavior and enhanced interactions
+    document.addEventListener('DOMContentLoaded', function() {
+      const cards = document.querySelectorAll('.project-card');
+      
+      cards.forEach(card => {
+        card.addEventListener('mouseenter', function() {
+          this.style.transform = 'translateY(-5px) scale(1.02)';
+        });
+        
+        card.addEventListener('mouseleave', function() {
+          this.style.transform = 'translateY(0) scale(1)';
+        });
+        
+        card.addEventListener('mousedown', function() {
+          this.style.transform = 'translateY(-2px) scale(1.01)';
+        });
+        
+        card.addEventListener('mouseup', function() {
+          this.style.transform = 'translateY(-5px) scale(1.02)';
+        });
+      });
+      
+      // Add more floating particles dynamically
+      function createParticle() {
+        const particle = document.createElement('div');
+        particle.className = 'particle';
+        particle.style.top = Math.random() * 100 + '%';
+        particle.style.left = Math.random() * 100 + '%';
+        particle.style.animationDelay = Math.random() * 6 + 's';
+        particle.style.animationDuration = (Math.random() * 3 + 4) + 's';
+        document.body.appendChild(particle);
+        
+        setTimeout(() => {
+          particle.remove();
+        }, 10000);
+      }
+      
+      // Create new particles periodically
+      setInterval(createParticle, 3000);
+    });
+  </script>
+</body>
+</html>

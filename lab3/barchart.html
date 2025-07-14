@@ -1,0 +1,228 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Car Sales Visualization</title>
+    <script src="https://d3js.org/d3.v7.min.js"></script>
+    <style>
+        body { font-family: Arial, sans-serif; text-align: center; }
+        .bar { cursor: pointer; }
+        .axis text { font-size: 12px; }
+        .axis path, .axis line { fill: none; stroke: #000; shape-rendering: crispEdges; }
+        .legend { font-size: 12px; display: flex; justify-content: center; margin-top: 20px; }
+        .legend-item { margin-right: 15px; }
+        .legend-color { display: inline-block; width: 12px; height: 12px; margin-right: 5px; }
+        .warning { color: red; }
+    </style>
+</head>
+<body>
+    <h1>Car Sales Visualization</h1>
+    <h2>After selecting the attribute, assign a color for each bar chart or histogram to give it a legend! </h2>
+    <div>
+        <label for="variableSelect">Select Variable:</label>
+        <select id="variableSelect"></select>
+    </div>
+    <div id="chart"></div>
+    <div id="legend" class="legend"></div>
+    <div>
+        <label for="colorSelect">Select Color:</label>
+        <input type="color" id="colorSelect">
+    </div>
+    <div id="warning" class="warning"></div>
+    <script>
+        // Global variables
+        let selectedBars = [];
+
+        d3.csv('processed_car_sales.csv').then(data => {
+            const keys = Object.keys(data[0]);
+            const select = d3.select('#variableSelect');
+            const colorSelect = d3.select('#colorSelect');
+
+            // Populate dropdown
+            select.selectAll('option')
+                .data(keys)
+                .enter()
+                .append('option')
+                .text(d => d)
+                .attr('value', d => d);
+
+            // Initial visualization
+            createChart(data, keys[0]);
+
+            // Update chart on variable selection
+            select.on('change', function() {
+                const variable = d3.select(this).property('value');
+                createChart(data, variable);
+            });
+        });
+
+        function createChart(data, variable) {
+            const svg = d3.select('#chart').html('').append('svg')
+                .attr('width', 800)
+                .attr('height', 500);
+
+            const margin = { top: 20, right: 30, bottom: 60, left: 60 };
+            const width = 800 - margin.left - margin.right;
+            const height = 400 - margin.top - margin.bottom;
+
+            const chart = svg.append('g')
+                .attr('transform', `translate(${margin.left},${margin.top})`);
+
+            // Check if the selected variable is numerical or categorical
+            const isNumerical = !isNaN(data[0][variable]);
+
+            if (isNumerical) {
+                createHistogram(chart, data, variable, width, height);
+            } else {
+                createBarChart(chart, data, variable, width, height);
+            }
+
+            // Add x-axis label
+            svg.append('text')
+                .attr('x', width / 2 + margin.left)
+                .attr('y', height + margin.top + 50)
+                .style('text-anchor', 'middle')
+                .text(variable);
+
+            // Add y-axis label
+            svg.append('text')
+                .attr('x', -(height / 2) - margin.top)
+                .attr('y', margin.left - 40)
+                .attr('transform', 'rotate(-90)')
+                .style('text-anchor', 'middle')
+                .text('Count');
+
+            // Clear the legend and warning
+            selectedBars = [];
+            d3.select('#legend').html('');
+            d3.select('#warning').html('');
+        }
+        function createHistogram(chart, data, variable, width, height) {
+            const xScale = d3.scaleLinear()
+                .domain(d3.extent(data, d => +d[variable]))
+                .range([0, width]);
+
+            const histogram = d3.histogram()
+                .value(d => +d[variable])
+                .domain(xScale.domain())
+                .thresholds(xScale.ticks(10));
+
+            const bins = histogram(data);
+
+            const yScale = d3.scaleLinear()
+                .domain([0, d3.max(bins, d => d.length)])
+                .range([height, 0]);
+
+            chart.selectAll('.bar')
+                .data(bins)
+                .enter()
+                .append('rect')
+                .attr('class', 'bar')
+                .attr('x', d => xScale(d.x0))
+                .attr('y', d => yScale(d.length))
+                .attr('width', d => xScale(d.x1) - xScale(d.x0) - 1)
+                .attr('height', d => height - yScale(d.length))
+                .attr('fill', 'steelblue')
+                .on('click', function(event, d) {
+                    const color = d3.select('#colorSelect').property('value');
+                    const binLabel = `${d.x0}-${d.x1}`;
+                    const existingColor = selectedBars.find(bar => bar.color === color);
+                    if (existingColor) {
+                        d3.select('#warning').text('This color has already been picked. Please select a different color.');
+                    } else {
+                        const existingBar = selectedBars.find(bar => bar.value === binLabel);
+                        if (existingBar) {
+                            existingBar.color = color;
+                        } else {
+                            selectedBars.push({ value: binLabel, color: color });
+                        }
+                        d3.select(this).attr('fill', color);
+                        d3.select('#warning').html('');
+                        updateLegend();
+                    }
+                });
+
+            // Add axes
+            chart.append('g')
+                .attr('transform', `translate(0,${height})`)
+                .call(d3.axisBottom(xScale));
+            chart.append('g')
+                .call(d3.axisLeft(yScale));
+
+            // Initialize legend for histogram ranges
+            selectedBars = bins.map(d => ({ value: `${d.x0}-${d.x1}`, color: 'steelblue' }));
+            updateLegend();
+        }
+
+        function createBarChart(chart, data, variable, width, height) {
+            const groupedData = d3.rollups(data, v => v.length, d => d[variable]);
+
+            const xScale = d3.scaleBand()
+                .domain(groupedData.map(d => d[0]))
+                .range([0, width])
+                .padding(0.1);
+
+            const yScale = d3.scaleLinear()
+                .domain([0, d3.max(groupedData, d => d[1])])
+                .range([height, 0]);
+
+            chart.selectAll('.bar')
+                .data(groupedData)
+                .enter()
+                .append('rect')
+                .attr('class', 'bar')
+                .attr('x', d => xScale(d[0]))
+                .attr('y', d => yScale(d[1]))
+                .attr('width', xScale.bandwidth())
+                .attr('height', d => height - yScale(d[1]))
+                .attr('fill', 'steelblue')
+                .on('click', function(event, d) {
+                    const color = d3.select('#colorSelect').property('value');
+                    const existingColor = selectedBars.find(bar => bar.color === color);
+                    if (existingColor) {
+                        d3.select('#warning').text('This color has already been picked. Please select a different color.');
+                    } else {
+                        const existingBar = selectedBars.find(bar => bar.value === d[0]);
+                        if (existingBar) {
+                            existingBar.color = color;
+                        } else {
+                            selectedBars.push({ value: d[0], color: color });
+                        }
+                        d3.select(this).attr('fill', color);
+                        d3.select('#warning').html('');
+                        updateLegend();
+                    }
+                });
+
+            // Add axes
+            chart.append('g')
+                .attr('transform', `translate(0,${height})`)
+                .call(d3.axisBottom(xScale));
+            chart.append('g')
+                .call(d3.axisLeft(yScale));
+
+            // Initialize the legend for bar chart categories
+            selectedBars = groupedData.map(d => ({ value: d[0], color: 'steelblue' }));
+            updateLegend();
+        }
+
+        function updateLegend() {
+            const legend = d3.select('#legend');
+
+            legend.selectAll('.legend-item').remove();
+
+            selectedBars.sort((a, b) => a.value.localeCompare(b.value, undefined, {numeric: true})).forEach(d => {
+                const item = legend.append('div')
+                    .attr('class', 'legend-item');
+
+                item.append('span')
+                    .attr('class', 'legend-color')
+                    .style('background-color', d.color);
+
+                item.append('span')
+                    .text(d.value);
+            });
+        }
+    </script>
+</body>
+</html>

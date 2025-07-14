@@ -1,0 +1,156 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>PCA Plot and Scree Plot</title>
+    <script src="https://d3js.org/d3.v6.min.js"></script>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            text-align: center;
+        }
+        svg {
+            display: block;
+            margin: auto;
+        }
+        .dot {
+            fill: purple;
+            stroke: white;
+            stroke-width: 1px;
+            fill-opacity: 0.7;
+        }
+        .axis text {
+            font-size: 12px;
+            fill: black;  
+        }
+        .axis line,
+        .axis path {
+            shape-rendering: crispEdges;
+            stroke: #000;
+            fill: none;
+        }
+    </style>
+</head>
+<body>
+    <h1>PCA Plot</h1>
+    <svg id="pca_plot" width="800" height="600"></svg>
+    <script>
+        d3.csv("pca_data.csv").then(function(data) {
+            var margin = {top: 20, right: 40, bottom: 70, left: 70},
+                width = 800 - margin.left - margin.right,
+                height = 600 - margin.top - margin.bottom;
+
+            var x = d3.scaleLinear().range([0, width]),
+                y = d3.scaleLinear().range([height, 0]);
+
+            var xAxis = d3.axisBottom(x),
+                yAxis = d3.axisLeft(y);
+
+            var svg = d3.select("#pca_plot")
+                .attr("width", width + margin.left + margin.right)
+                .attr("height", height + margin.top + margin.bottom)
+              .append("g")
+                .attr("transform", "translate(" + margin.left + "," + margin.top + ")");
+
+            x.domain(d3.extent(data, function(d) { return +d.PC1; })).nice();
+            y.domain(d3.extent(data, function(d) { return +d.PC2; })).nice();
+
+            // Add X axis label
+            svg.append("g")
+                .attr("class", "x axis")
+                .attr("transform", "translate(0," + height + ")")
+                .call(xAxis)
+              .append("text")
+                .attr("class", "label")
+                .attr("x", width / 2)
+                .attr("y", 40)  // Adjusted position so the axis pops up
+                .style("text-anchor", "middle")
+                .text("Principal Component 1");
+
+            // Add Y axis label
+            svg.append("g")
+                .attr("class", "y axis")
+                .call(yAxis)
+              .append("text")
+                .attr("class", "label")
+                .attr("transform", "rotate(-90)")
+                .attr("x", -height / 2 - 10)  
+                .attr("y", -40)  // Adjusted position once again. Chatgpt fixed this.
+                .attr("dy", ".71em")
+                .style("text-anchor", "middle")
+                .text("Principal Component 2");
+
+            svg.selectAll(".dot")
+                .data(data)
+              .enter().append("circle")
+                .attr("class", "dot")
+                .attr("r", 3.5)
+                .attr("cx", function(d) { return x(d.PC1); })
+                .attr("cy", function(d) { return y(d.PC2); })
+                .style("fill", "purple");
+        }).catch(function(error) {
+            console.error('Error loading or processing data:', error);
+        });
+    </script>
+
+    <h1>Scree Plot</h1>
+    <svg id="scree-plot" width="800" height="600"></svg>
+    <script>
+        d3.csv("variance_data.csv").then(function(data) {
+            var margin = {top: 20, right: 30, bottom: 80, left: 90},  // Increased left margin. ChatGpt fixed this bad margin.
+                width = 800 - margin.left - margin.right,
+                height = 600 - margin.top - margin.bottom;
+
+            var x = d3.scaleBand().range([0, width]).padding(0.1),
+                y = d3.scaleLinear().range([height, 0]);
+
+            var svg = d3.select("#scree-plot")
+                .attr("width", width + margin.left + margin.right)
+                .attr("height", height + margin.top + margin.bottom)
+              .append("g")
+                .attr("transform", "translate(" + margin.left + "," + margin.top + ")");
+
+            x.domain(data.map(function(d, i) { return i + 1; }));
+            y.domain([0, d3.max(data, function(d) { return +d.Variance; })]);
+
+            //add bar
+            svg.selectAll(".bar")
+                .data(data)
+              .enter().append("rect")
+                .attr("class", "bar")
+                .attr("x", function(d, i) { return x(i + 1); })
+                .attr("width", x.bandwidth())
+                .attr("y", function(d) { return y(d.Variance); })
+                .attr("height", function(d) { return height - y(d.Variance); })
+                .attr("fill", "purple");
+
+            //add x-axis
+            svg.append("g")
+                .attr("class", "x axis")
+                .attr("transform", "translate(0," + height + ")")
+                .call(d3.axisBottom(x).tickFormat(d3.format(".0f")))
+              .append("text")
+                .attr("class", "label")
+                .attr("x", width / 2)
+                .attr("y", 40)  
+                .style("text-anchor", "middle")
+                .text("Principal Components");
+
+                //add y-axis
+                svg.append("g")
+                    .attr("class", "y axis")
+                    .call(d3.axisLeft(y))  // Corrected
+                    .append("text")
+                    .attr("class", "label")
+                    .attr("transform", "rotate(-90)")
+                    .attr("x", -height / 2 - 10) 
+                    .attr("y", -50)  // changed position for y
+                    .attr("dy", ".71em")
+                    .style("text-anchor", "middle")
+                    .text("Variance");
+        }).catch(function(error) {
+            console.error('Error loading or processing data:', error);
+        });
+    </script>
+</body>
+</html>

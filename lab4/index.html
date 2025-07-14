@@ -1,0 +1,616 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Car Data Dashboard</title>
+    <script src="https://d3js.org/d3.v7.min.js"></script>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            background-color: black;
+            color: white;
+        }
+        .chart {
+            display: inline-block;
+            width: 45%;
+            box-sizing: border-box;
+            margin-top: 0%;
+            margin-bottom: 0%;
+            color:white;
+        }
+        .dashboard{
+            display: flex;
+            flex-wrap: wrap;
+            justify-content:space-around;
+            box-sizing: border-box;
+            background-color: black;
+            color:white;
+        }
+        .title {
+            text-align: center;
+            margin-top: 0%;
+            margin-bottom: 0%;
+            color: white;
+        }
+        .hidden {
+            display: none;
+        }
+        svg text{
+            fill: white;
+        }
+
+    </style>
+</head>
+<body>
+    <h4 class="title">Car Data Dashboard</h4>
+    <div class="dashboard">
+        <div class="chart" id="bar-chart"></div>
+        <div class="chart" id="scatterplot"></div>
+        <div class="chart" id="parallel-coordinates"></div>
+        <div class="chart" id="chord-diagram"></div>
+    </div>
+
+    <script>
+        d3.csv('cars.csv').then(data => {
+            createBarChart(data);
+            createScatterplot(data);
+            createParallelCoordinates();
+            createChordDiagram();
+        });
+
+        const colors = d3.scaleOrdinal(d3.schemeCategory10);
+        let selectedTypes = new Set();
+        let labels; //chord-diagram labels
+
+        //bar chart
+        function createBarChart(data) {
+            const svg = d3.select('#bar-chart').append('svg')
+                .attr('width', 600)
+                .attr('height', 400);
+
+            const margin = { top: 60, right: 20, bottom: 60, left: 60 };
+            const width = 600 - margin.left - margin.right;
+            const height = 400 - margin.top - margin.bottom;
+
+            const chart = svg.append('g')
+                .attr('transform', `translate(${margin.left},${margin.top})`);
+
+            const groupedData = d3.rollups(data, v => v.length, d => d.carbody);
+
+            const xScale = d3.scaleBand()
+                .domain(groupedData.map(d => d[0]))
+                .range([0, width])
+                .padding(0.1);
+
+            const yScale = d3.scaleLinear()
+                .domain([0, d3.max(groupedData, d => d[1])])
+                .range([height, 0]);
+
+            chart.selectAll('.bar')
+                .data(groupedData)
+                .enter().append('rect')
+                .attr('class', 'bar')
+                .attr('x', d => xScale(d[0]))
+                .attr('y', d => yScale(d[1]))
+                .attr('width', xScale.bandwidth())
+                .attr('height', d => height - yScale(d[1]))
+                .attr('fill', d => colors(d[0]))
+                .on('click', function(event, d) {
+                    if (event.shiftKey) {
+                        if (selectedTypes.has(d[0])) {
+                            selectedTypes.delete(d[0]);
+                        } else {
+                            selectedTypes.add(d[0]);
+                        }
+                    } else {
+                        selectedTypes = new Set([d[0]]);
+                    }
+                    updateScatterplot();
+                    updateBarChart();
+                    updateParallelCoordinates();
+                    updateChordDiagramColors();
+                })
+
+            chart.append('g')
+                .attr('transform', `translate(0,${height})`)
+                .call(d3.axisBottom(xScale))
+                .selectAll("text")
+                .attr("y", 0)
+                .attr("x", 9)
+                .attr("dy", ".35em")
+                .attr("transform", "rotate(45)")
+                .style("text-anchor", "start");
+
+            chart.append('g')
+                .call(d3.axisLeft(yScale));
+
+            // Add x-axis label
+            svg.append('text')
+                .attr('x', width / 2 + margin.left)
+                .attr('y', height + margin.top + 55)
+                .attr('text-anchor', 'middle')
+                .style('font-size', '12px')
+                .text('Car Body Type');
+
+            // Add y-axis label
+            svg.append('text')
+                .attr('transform', 'rotate(-90)')
+                .attr('x', -height / 2 - margin.top)
+                .attr('y', margin.left / 3)
+                .attr('text-anchor', 'middle')
+                .style('font-size', '12px')
+                .text('Number of Cars');
+
+            // Update title style
+            svg.append('text')
+                .attr('x', width / 2 + margin.left)
+                .attr('y', margin.top / 2)
+                .attr('text-anchor', 'middle')
+                .style('font-size', '16px')
+                .style('font-weight', 'bold')
+                .text('Car Types Distribution');
+        }
+
+        //scatterplot
+        function createScatterplot(data) {
+            const svg = d3.select('#scatterplot').append('svg')
+                .attr('width', 610)
+                .attr('height', 400);
+
+            const margin = { top: 60, right: 20, bottom: 60, left: 80 };
+            const width = 600 - margin.left - margin.right;
+            const height = 400 - margin.top - margin.bottom;
+
+            const chart = svg.append('g')
+                .attr('transform', `translate(${margin.left},${margin.top})`);
+
+            const xScale = d3.scaleLinear()
+                .domain([0, d3.max(data, d => +d.horsepower)])
+                .range([0, width]);
+
+            const yScale = d3.scaleLinear()
+                .domain([0, d3.max(data, d => +d.price)])
+                .range([height, 0]);
+
+            chart.selectAll('.dot')
+                .data(data)
+                .enter().append('circle')
+                .attr('class', 'dot')
+                .attr('cx', d => xScale(+d.horsepower))
+                .attr('cy', d => yScale(+d.price))
+                .attr('r', 5)
+                .style('fill', d => colors(d.carbody));
+
+            chart.append('g')
+                .attr('transform', `translate(0,${height})`)
+                .call(d3.axisBottom(xScale).ticks(10).tickFormat(d3.format(".0f")));
+
+            chart.append('g')
+                .call(d3.axisLeft(yScale));
+
+            // Add x-axis label
+            svg.append('text')
+                .attr('x', width / 2 + margin.left)
+                .attr('y', height + margin.top + 40)
+                .attr('text-anchor', 'middle')
+                .style('font-size', '12px')
+                .text('Horsepower');
+
+            // Add y-axis label
+            svg.append('text')
+                .attr('transform', 'rotate(-90)')
+                .attr('x', -height / 2 - margin.top)
+                .attr('y', margin.left / 3 )
+                .attr('text-anchor', 'middle')
+                .style('font-size', '12px')
+                .text('Price');
+
+            // add title
+            svg.append('text')
+                .attr('x', width / 2 + margin.left)
+                .attr('y', margin.top / 2)
+                .attr('text-anchor', 'middle')
+                .style('font-size', '16px')
+                .style('font-weight', 'bold')
+                .text('Price vs Horsepower Scatterplot');
+        }
+
+        //parallel coordinates
+        function createParallelCoordinates() {
+            d3.csv('cars.csv').then(data => {
+                console.log(data); // Check if data loads correctly
+
+                const svg = d3.select('#parallel-coordinates').append('svg')
+                    .attr('width', 600)
+                    .attr('height', 400);
+
+                const margin = { top: 60, right: 20, bottom: 60, left: 60 };
+                const width = 600 - margin.left - margin.right;
+                const height = 400 - margin.top - margin.bottom;
+
+                const chart = svg.append('g')
+                    .attr('transform', `translate(${margin.left},${margin.top})`);
+
+                //title
+                svg.append('text')
+                    .attr('x', width / 2 + margin.left)
+                    .attr('y', margin.top / 2)
+                    .attr('text-anchor', 'middle')
+                    .style('font-size', '16px')
+                    .style('font-weight', 'bold') 
+                    .text('Parallel Coordinates Chart');
+
+                const attributes = ['price', 'horsepower', 'enginesize', 'curbweight', 'citympg', 'highwaympg', 'carbody'];
+
+                const dimensions = attributes.filter(d => d !== 'carbody');
+            
+
+                const yScales = {};
+                dimensions.forEach(dim => {
+                    yScales[dim] = d3.scaleLinear()
+                        .domain(d3.extent(data, d => +d[dim])) // Dynamic scale based on data extent -> COPILOT.COM SOURCE CODE
+                        .range([height, 0]);
+                });
+
+                const xScale = d3.scalePoint()
+                    .domain(dimensions)
+                    .range([0, width])
+                    .padding(1);
+
+                const line = d3.line()
+                    .defined(d => d)
+                    .x(d => xScale(d.dimension))
+                    .y(d => yScales[d.dimension](d.value));
+
+                // Draw the lines
+                chart.selectAll('.line')
+                    .data(data)
+                    .enter().append('path')
+                    .attr('class', 'line')
+                    .attr('d', d => line(dimensions.map(dim => ({ dimension: dim, value: +d[dim] }))))
+                    .style('fill', 'none')
+                    .style('stroke', d => colors(d.carbody))
+                    .style('opacity', 0.5);
+
+                // Draw the axes
+                chart.selectAll('.dimension')
+                    .data(dimensions)
+                    .enter().append('g')
+                    .attr('class', 'dimension')
+                    .attr('transform', d => `translate(${xScale(d)})`)
+                    .each(function(d) {
+                        d3.select(this).call(d3.axisLeft(yScales[d]));
+                    });
+
+                // Add attribute labels 
+                svg.selectAll('.attribute-label')
+                    .data(dimensions)
+                    .enter().append('text')
+                    .attr('class', 'attribute-label')
+                    .attr('x', d => xScale(d) + margin.left)
+                    .attr('y', margin.top - 10) //adjusted by chatgpt
+                    .attr('text-anchor', 'middle')
+                    .style('font-size', '10px')
+                    .text(d => d);
+
+                // Add x-axis label
+                svg.append('text')
+                    .attr('x', width / 2 + margin.left)
+                    .attr('y', height + margin.top + 40)
+                    .attr('text-anchor', 'middle')
+                    .style('font-size', '12px')
+
+                // Add y-axis label
+                svg.append('text')
+                    .attr('transform', 'rotate(-90)')
+                    .attr('x', -height / 2 - margin.top)
+                    .attr('y', margin.left / 3)
+                    .attr('text-anchor', 'middle')
+                    .style('font-size', '12px')
+
+            }).catch(error => {
+                console.error('Error loading data:', error);
+            });
+        }
+
+        //update scatterplot colors
+            function updateScatterplot() {
+                d3.csv('cars.csv').then(data => {
+                    const svg = d3.select('#scatterplot svg');
+                    const chart = svg.select('g');
+
+                    const xScale = d3.scaleLinear()
+                        .domain([0, d3.max(data, d => +d.horsepower)])
+                        .range([0, 600 - 60 - 20]);
+
+                    const yScale = d3.scaleLinear()
+                        .domain([0, d3.max(data, d => +d.price)])
+                        .range([400 - 40 - 60, 0]);
+
+                    const dots = chart.selectAll('.dot')
+                        .data(data);
+
+                    dots.enter().append('circle')
+                        .attr('class', 'dot')
+                        .attr('cx', d => xScale(+d.horsepower))
+                        .attr('cy', d => yScale(+d.price))
+                        .attr('r', 5)
+                        .merge(dots)
+                        .style('fill', d => selectedTypes.has(d.carbody) ? colors(d.carbody) : 'gray')
+                        .style('opacity', d => selectedTypes.has(d.carbody) ? 1 : 0.3)
+                        .attr('cx', d => xScale(+d.horsepower))
+                        .attr('cy', d => yScale(+d.price));
+
+                    dots.exit().remove();
+                });
+            }
+
+            //update bar chart colors
+            function updateBarChart() {
+                d3.selectAll('.bar')
+                    .style('fill', d => selectedTypes.has(d[0]) ? colors(d[0]) : 'gray');
+            }
+
+            //update parallel coordiantes colors
+            function updateParallelCoordinates() {
+                d3.csv('parallel_coordinates_data.csv').then(data => {
+                    console.log(data);
+                    const svg = d3.select('#parallel-coordinates');
+                    const chart = svg.select('g');
+
+                    const dimensions = Object.keys(data[0]).filter(d => d !== 'carbody');
+
+                    const yScales = {};
+                    dimensions.forEach(dim => {
+                        yScales[dim] = d3.scaleLinear()
+                            .domain([0, 1])
+                            .range([400 - 60 - 20, 0]);
+                    });
+
+                    const xScale = d3.scalePoint()
+                        .domain(dimensions)
+                        .range([0, 800 - 60 - 20])
+                        .padding(1);
+
+                    const line = d3.line()
+                        .defined(d => d)
+                        .x(d => xScale(d.dimension))
+                        .y(d => yScales[d.dimension](d.value));
+
+                    const paths = chart.selectAll('.line')
+                        .data(data);
+
+                    paths.enter().append('path')
+                        .attr('class', 'line')
+                        .attr('d', d => line(dimensions.map(dim => ({ dimension: dim, value: +d[dim] }))))
+                        .merge(paths)
+                        .style('fill', 'none')
+                        .style('stroke', d => selectedTypes.has(d.carbody) ? colors(d.carbody) : 'gray')
+                        .style('opacity', d => selectedTypes.has(d.carbody) ? 1 : 0.3);
+
+                    paths.exit().remove();
+
+                    chart.selectAll('.dimension')
+                        .data(dimensions)
+                        .enter().append('g')
+                        .attr('class', 'dimension')
+                        .attr('transform', d => `translate(${xScale(d)})`)
+                        .each(function(d) {
+                            d3.select(this).call(d3.axisLeft(yScales[d]));
+                        });
+
+                    chart.selectAll('.dimension')
+                        .append('text')
+                        .attr('class', 'axis-label')
+                        .attr('transform', 'rotate(-15)')
+                        .attr('y', -10)
+                        .attr('text-anchor', 'middle')
+                });
+            }
+
+        //create chord diagram --> check report for source code source
+        function createChordDiagram() {
+            const matrix = [
+                [0, 1, 5, 0, 0],
+                [0, 1, 7, 0, 0],
+                [2, 49, 19, 0, 0],
+                [3, 57, 36, 0, 0],
+                [4, 12, 9, 0, 0]
+            ];
+
+            const labels = ["convertible", "hardtop", "hatchback", "sedan", "wagon"];
+
+            const colorMap = {
+                "convertible": "#1f77b4", // Blue
+                "hardtop": "#9467bd",    // Purple
+                "hatchback": "#ff7f0e",  // Orange
+                "sedan": "#2ca02c",      // Green
+                "wagon": "#d62728"       // Red
+            };
+
+            //Copilot source code for ribbon dynamic coloring opacity
+            const intensityScale = d3.scaleLinear()
+                .domain([0, d3.max(matrix.flat())]) // Adjust domain based on your data
+                .range([0.3, 1]); // Adjust range for opacity
+
+            
+            const svgWidth = 600; 
+            const svgHeight = 400; 
+            const radius = Math.min(svgWidth, svgHeight) / 2 - 40; // Adjust radius for padding
+
+            const svg = d3.select('#chord-diagram').append('svg')
+                .attr('width', svgWidth)
+                .attr('height', svgHeight);
+
+            // Add title
+            svg.append('text')
+                .attr('x', svgWidth / 2)
+                .attr('y', 30) 
+                .attr('text-anchor', 'middle')
+                .style('font-size', '16px')
+                .style('font-weight', 'bold')
+                .text('Carbody Type Relationship Based On Drivewheel Types');
+
+            const g = svg.append('g')
+                .attr('transform', `translate(${svgWidth / 2}, ${svgHeight / 2 + 35})`); // Adjust translation for center alignment
+
+            const chord = d3.chord()
+                .padAngle(0.05)
+                .sortSubgroups(d3.descending);
+
+            const arc = d3.arc()
+                .innerRadius(radius - 10)
+                .outerRadius(radius);
+
+            const ribbon = d3.ribbon()
+                .radius(radius - 10);
+
+            const chords = chord(matrix);
+
+            // Add the arcs
+            const group = g.append('g')
+                .selectAll('g')
+                .data(chords.groups)
+                .enter().append('g');
+
+            group.append('path')
+                .attr('class', 'arc')
+                .style('fill', d => colorMap[labels[d.index]])
+                .style('stroke', d => d3.rgb(colorMap[labels[d.index]]).darker())
+                .attr('d', arc);
+
+            // Add labels
+            group.append('text')
+                .each(d => { d.angle = (d.startAngle + d.endAngle) / 2; })
+                .attr('dy', '.35em')
+                .attr('transform', d => `
+                    rotate(${(d.angle * 180 / Math.PI - 90)})
+                    translate(${radius + 10})
+                    ${(d.angle > Math.PI ? 'rotate(180)' : '')}
+                `)
+                .style('text-anchor', d => d.angle > Math.PI ? 'end' : null)
+                .style('font-size', '7px') // Reduced font size
+                .text(d => labels[d.index]);
+
+            // Add the ribbons with opacity based on intensity
+            const ribbons = g.append('g')
+                .selectAll('path')
+                .data(chords)
+                .enter().append('path')
+                .attr('class', 'ribbon')
+                .attr('d', ribbon)
+                .style('fill', d => colorMap[labels[d.target.index]])
+                .style('stroke', d => d3.rgb(colorMap[labels[d.target.index]]).darker())
+                .style('opacity', d => intensityScale(d.source.value))
+                .on('mouseover', function(event, d) {
+                    const carbody = labels[d.target.index];
+                    svg.selectAll('.ribbon')
+                        .style('opacity', p => labels[p.target.index] === carbody ? intensityScale(p.source.value) : 0.1);
+                    svg.selectAll('.arc')
+                        .style('opacity', p => labels[p.index] === carbody ? 1 : 0.1);
+                })
+                .on('mouseout', function() {
+                    svg.selectAll('.ribbon')
+                        .style('opacity', d => intensityScale(d.source.value));
+                    svg.selectAll('.arc')
+                        .style('opacity', 1);
+                });
+        }
+
+
+        function resetCharts() {
+            d3.csv('cars.csv').then(data => {
+                // Reset scatterplot
+                const svgScatter = d3.select('#scatterplot svg');
+                const chartScatter = svgScatter.select('g');
+
+                const xScaleScatter = d3.scaleLinear()
+                    .domain([0, d3.max(data, d => +d.horsepower)])
+                    .range([0, 600 - 60 - 20]);
+
+                const yScaleScatter = d3.scaleLinear()
+                    .domain([0, d3.max(data, d => +d.price)])
+                    .range([400 - 40 - 60, 0]);
+
+                const dotsScatter = chartScatter.selectAll('.dot')
+                    .data(data);
+
+                dotsScatter.enter().append('circle')
+                    .attr('class', 'dot')
+                    .attr('cx', d => xScaleScatter(+d.horsepower))
+                    .attr('cy', d => yScaleScatter(+d.price))
+                    .attr('r', 5)
+                    .merge(dotsScatter)
+                    .style('fill', d => colors(d.carbody))
+                    .style('opacity', 1)
+                    .attr('cx', d => xScaleScatter(+d.horsepower))
+                    .attr('cy', d => yScaleScatter(+d.price));
+
+                dotsScatter.exit().remove();
+
+                // Reset bar chart
+                d3.selectAll('.bar')
+                    .style('fill', d => colors(d[0]));
+
+                // Reset parallel coordinates --> section of this code is from copilot.com
+                d3.csv('parallel_coordinates_data.csv').then(data => {
+                    const svgParallel = d3.select('#parallel-coordinates svg');
+                    const chartParallel = svgParallel.select('g');
+
+                    const dimensions = Object.keys(data[0]).filter(d => d !== 'carbody');
+
+                    const yScalesParallel = {};
+                    dimensions.forEach(dim => {
+                        yScalesParallel[dim] = d3.scaleLinear()
+                            .domain([0, 1])
+                            .range([400 - 60 - 20, 0]);
+                    });
+
+                    const xScaleParallel = d3.scalePoint()
+                        .domain(dimensions)
+                        .range([0, 800 - 60 - 20])
+                        .padding(1);
+
+                    const lineParallel = d3.line()
+                        .defined(d => d)
+                        .x(d => xScaleParallel(d.dimension))
+                        .y(d => yScalesParallel[d.dimension](d.value));
+
+                    const pathsParallel = chartParallel.selectAll('.line')
+                        .data(data);
+
+                    pathsParallel.enter().append('path')
+                        .attr('class', 'line')
+                        .attr('d', d => lineParallel(dimensions.map(dim => ({ dimension: dim, value: +d[dim] }))))
+                        .merge(pathsParallel)
+                        .style('fill', 'none')
+                        .style('stroke', d => colors(d.carbody))
+                        .style('opacity', 1);
+
+                    pathsParallel.exit().remove();
+
+                    chartParallel.selectAll('.dimension')
+                        .data(dimensions)
+                        .enter().append('g')
+                        .attr('class', 'dimension')
+                        .attr('transform', d => `translate(${xScaleParallel(d)})`)
+                        .each(function(d) {
+                            d3.select(this).call(d3.axisLeft(yScalesParallel[d]));
+                        });
+
+                    chartParallel.selectAll('.dimension')
+                        .append('text')
+                        .attr('class', 'axis-label')
+                        .attr('transform', 'rotate(-15)')
+                        .attr('y', -10)
+                        .attr('text-anchor', 'middle')
+                        .text(d => d);
+                });
+            });
+        }
+
+    </script>
+</body>
+</html>
+

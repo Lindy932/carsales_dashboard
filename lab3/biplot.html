@@ -1,0 +1,83 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Biplot Visualization</title>
+    <script src="https://d3js.org/d3.v7.min.js"></script>
+    <style>
+        body { font-family: Arial, sans-serif; text-align: center; }
+        .axis text { font-size: 12px; }
+        .axis path, .axis line { fill: none; stroke: #000; shape-rendering: crispEdges; }
+        .dot { fill: purple; }
+    </style>
+</head>
+<body>
+    <h1>Biplot Visualization</h1>
+    <div id="biplot"></div>
+    <script>
+        d3.csv('biplot_scores.csv').then(data => {
+            const margin = { top: 40, right: 30, bottom: 60, left: 50 };
+            const width = 800 - margin.left - margin.right;
+            const height = 600 - margin.top - margin.bottom;
+
+            const x = d3.scaleLinear().range([0, width]);
+            const y = d3.scaleLinear().range([height, 0]);
+
+            const xAxis = d3.axisBottom(x);
+            const yAxis = d3.axisLeft(y);
+
+            const svg = d3.select("#biplot").append("svg")
+                .attr("width", width + margin.left + margin.right)
+                .attr("height", height + margin.top + margin.bottom)
+                .append("g")
+                .attr("transform", "translate(" + margin.left + "," + margin.top + ")");
+
+            x.domain(d3.extent(data, d => +d.PC1)).nice();
+            y.domain(d3.extent(data, d => +d.PC2)).nice();
+
+            svg.append("g")
+                .attr("class", "x axis")
+                .attr("transform", "translate(0," + height + ")")
+                .call(xAxis)
+                .append("text")
+                .attr("class", "label")
+                .attr("x", width / 2)
+                .attr("y", 40)
+                .style("text-anchor", "middle")
+                .text("Principal Component 1");
+
+            svg.append("g")
+                .attr("class", "y axis")
+                .call(yAxis)
+                .append("text")
+                .attr("class", "label")
+                .attr("transform", "rotate(-90)")
+                .attr("x", -height / 2)
+                .attr("y", -40)
+                .attr("dy", ".71em")
+                .style("text-anchor", "middle")
+                .text("Principal Component 2");
+
+            svg.selectAll(".dot")
+                .data(data)
+                .enter().append("circle")
+                .attr("class", "dot")
+                .attr("r", 3.5)
+                .attr("cx", d => x(d.PC1))
+                .attr("cy", d => y(d.PC2))
+                .attr("fill", "purple");
+
+            updateHighlighting();
+        });
+
+        function updateHighlighting() {
+            d3.csv('biplot_scores.csv').then(biplotData => {
+                d3.selectAll('.dot').attr('fill', function(d) {
+                    const point = selectedBars.find(bar => bar.rows.includes(d.car_id));
+                    return point ? point.color : 'purple';
+                });
+            });
+        }
+    </script>
+</body>
+</html>

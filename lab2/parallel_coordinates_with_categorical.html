@@ -1,0 +1,118 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Parallel Coordinates</title>
+    <script src="https://d3js.org/d3.v6.min.js"></script>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            text-align: center;
+        }
+        h1{
+            text-align: center;
+        }
+        .parallel-coords-svg {
+            display: block;
+            margin: auto;
+        }
+        .parallel-coords-background path {
+            fill: none;
+            stroke: #ddd;
+            shape-rendering: crispEdges;
+        }
+        .parallel-coords-foreground path {
+            fill: none;
+            stroke: purple;
+            stroke-opacity: 0.7;
+        }
+        .parallel-coords-axis text {
+            font-size: 5px;
+        }
+        .parallel-coords-axis line,
+        .parallel-coords-axis path {
+            shape-rendering: crispEdges;
+            stroke: #000;
+            fill: none;
+        }
+    </style>
+</head>
+<body>
+    <h1>Parallel Coordinates: Numerical and Categorical</h1>
+    <svg class="parallel-coords-svg" id="parallel-coordinates" width="1200" height="500"></svg>
+    <script>
+    d3.csv("filtered_data_with_categorical.csv").then(function(data) {
+        var margin = {top: 30, right: 10, bottom: 60, left: 10},  // Further increase bottom margin. ChatGpt fix my margins.
+            width = 1200 - margin.left - margin.right,
+            height = 500 - margin.top - margin.bottom;
+
+        var dimensions = Object.keys(data[0]);
+
+        var x = d3.scalePoint().range([0, width]).padding(1),
+            y = {};
+
+        x.domain(dimensions);
+
+        dimensions.forEach(function(d) {
+            if (typeof data[0][d] === "string") {
+                y[d] = d3.scalePoint()
+                    .domain(data.map(function(p) { return p[d]; }))
+                    .range([height, 0]);
+            } else {
+                y[d] = d3.scaleLinear()
+                    .domain(d3.extent(data, function(p) { return +p[d]; }))
+                    .range([height, 0]);
+            }
+        });
+
+        var line = d3.line(),
+            axis = d3.axisLeft(),
+            background,
+            foreground;
+
+        var svg = d3.select("#parallel-coordinates")
+            .attr("width", width + margin.left + margin.right)
+            .attr("height", height + margin.top + margin.bottom)
+        .append("g")
+            .attr("transform", "translate(" + margin.left + "," + margin.top + ")");
+
+        background = svg.append("g")
+            .attr("class", "parallel-coords-background")
+        .selectAll("path")
+            .data(data)
+        .enter().append("path")
+            .attr("d", path);
+
+        foreground = svg.append("g")
+            .attr("class", "parallel-coords-foreground")
+        .selectAll("path")
+            .data(data)
+        .enter().append("path")
+            .attr("d", path);
+
+        var g = svg.selectAll(".dimension")
+            .data(dimensions)
+        .enter().append("g")
+            .attr("class", "parallel-coords-axis")
+            .attr("transform", function(d) { return "translate(" + x(d) + ")"; });
+
+        g.append("g")
+            .attr("class", "axis")
+            .each(function(d) { d3.select(this).call(axis.scale(y[d])); });
+
+        g.append("text")
+            .style("text-anchor", "middle")
+            .attr("class", "axis-label")
+            .attr("y", height + 40)  // Increase the position value. ChatGpt fixed it.
+            .text(function(d) { return d; });
+
+        function path(d) {
+            return line(dimensions.map(function(p) { return [x(p), y[p](d[p])]; }));
+        }
+    }).catch(function(error) {
+        console.error('Error loading or processing data:', error);
+    });
+
+    </script>
+</body>
+</html>

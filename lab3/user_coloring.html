@@ -1,0 +1,699 @@
+<!DOCTYPE html>
+<html lang="en">
+    <head>
+        <meta charset="UTF-8">
+        <title>Car Visualization</title>
+        <script src="https://d3js.org/d3.v7.min.js"></script>
+        <!--Most of the margins are adjusted by ChatGPT.com-->
+        <style>
+            body { font-family: Arial, sans-serif; text-align: center; background: radial-gradient(circle,#ffd1dc,#f9c7e0);color: #4a4a4a}
+            .bar { cursor: pointer; }
+            .axis text { font-size: 12px; }
+            .axis path, .axis line { fill: none; stroke: #000; shape-rendering: crispEdges; }
+            .legend { font-size: 12px; display: flex; justify-content: center; margin-top: 20px; margin-bottom: 20px; }
+            .legend-item { margin-right: 15px; }
+            .legend-color { display: inline-block; width: 12px; height: 12px; margin-right: 5px; }
+            .warning { color: red; }
+            .tooltip { 
+                position: absolute; 
+                text-align: center; 
+                width: 120px; 
+                height: auto; 
+                padding: 5px; 
+                font: 12px sans-serif; 
+                background: lightsteelblue; 
+                border: 0px; 
+                border-radius: 8px; 
+                pointer-events: none;
+                background: radial-gradient(circle,#ffd1dc,#f9c7e0);
+                color: #4a4a4a;
+            }
+
+
+            .container {
+                background:white;
+                padding: 30px;
+                border-radius: 15px;
+                box-shadow:0 4px 8px rgba(0,0,0,0.1);
+                text-align:center;
+                max-width: 800px;
+                margin: auto;
+            }
+
+            /* Adjust the positioning of the chart and legend */
+            #chart {
+                margin-bottom: 20px;
+            }
+
+
+        select {
+            padding: 10px;
+            font-size: 16px;
+            border: 1px solid #ccc;
+            border-radius: 5px;
+            background-color: #fff;
+            cursor: pointer;
+            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+            transition: border-color 0.3s, box-shadow 0.3s;
+        }
+        select:hover {
+            border-color: #888;
+            box-shadow: 0 6px 12px rgba(0, 0, 0, 0.2);
+        }
+
+</style>
+
+    </head>    
+<body>
+    <div class ="container">
+        <h1>User-Interactive Dashboard</h1>
+        <h2>After selecting the variable, click on the bars to auto-assign a color! </h2>
+        <div>
+            <label for="variableSelect">Select Variable:</label>
+            <select id="variableSelect">
+                <option value="" disabled selected>--select a variable--</option>
+            </select>
+        </div>
+        <div id="chart" style="margin-bottom: 5px; padding-bottom: 0;"></div>
+        <div id="legend" class="legend" style="margin-top:5px; margin-bottom: 50px; padding-bottom: 0;" ></div>
+        <div id="warning" class="warning" style="margin-bottom: 50px;"></div>
+        <div id="biplot-container"></div>
+        <div id="mdsplots-container"></div>
+        <div id="parallel-coordinates"></div>
+    </div>
+
+    <script>
+        // Global variables
+        let selectedBars = [];
+    
+        d3.csv('cars.csv').then(data => {
+            const keys = Object.keys(data[0]);
+            const select = d3.select('#variableSelect');
+            const colorSelect = d3.select('#colorSelect');
+
+            const filteredKeys = keys.filter(key => !['car_ID', 'symboling', 'CarName'].includes(key));
+    
+            // dropdown menu
+            select.selectAll('option')
+                .data(filteredKeys)
+                .enter()
+                .append('option')
+                .text(d => d)
+                .attr('value', d => d);
+    
+            // Initialize the visualization
+            createChart(data, keys[0]);
+    
+            // Update chart on variable selection
+            select.on('change', function() {
+                const variable = d3.select(this).property('value');
+                createChart(data, variable);
+            });
+        });
+    
+        //for the hover effect source: copilot.com
+        function createTooltip() {
+            return d3.select("body").append("div")
+                .attr("class", "tooltip")
+                .style("opacity", 0);
+        }
+    
+        function createChart(data, variable) {
+            const svg = d3.select('#chart').html('').append('svg')
+                .attr('width', 800)
+                .attr('height', 500);
+    
+            const margin = { top: 60, right: 30, bottom: 20, left: 60 };
+            const width = 800 - margin.left - margin.right;
+            const height = 400 - margin.top - margin.bottom;
+    
+            const chart = svg.append('g')
+                .attr('transform', `translate(${margin.left},${margin.top})`);
+    
+            // Check if the selected variable is numerical or categorical
+            const isNumerical = !isNaN(data[0][variable]);
+    
+            if (isNumerical) {
+                createHistogram(chart, data, variable, width, height);
+            } else {
+                createBarChart(chart, data, variable, width, height);
+            }
+    
+            //x-axis label
+            svg.append('text')
+                .attr('x', width / 2 + margin.left)
+                .attr('y', height + margin.top + 50)
+                .style('text-anchor', 'middle')
+                .text(variable);
+    
+            //y-axis label
+            svg.append('text')
+                .attr('x', -(height / 2) - margin.top)
+                .attr('y', margin.left - 40)
+                .attr('transform', 'rotate(-90)')
+                .style('text-anchor', 'middle')
+                .text('Count');
+    
+            // Clear the legend and give warning
+            selectedBars = [];
+            d3.select('#legend').html('');
+            d3.select('#warning').html('');
+        }
+
+        function createBarChart(chart, data, variable, width, height) {
+            const groupedData = d3.rollups(data, v => v.length, d => d[variable]);
+
+            const xScale = d3.scaleBand()
+                .domain(groupedData.map(d => d[0]))
+                .range([0, width])
+                .padding(0.1);
+
+            const yScale = d3.scaleLinear()
+                .domain([0, d3.max(groupedData, d => d[1])])
+                .range([height, 0]);
+
+            chart.selectAll('.bar')
+                .data(groupedData)
+                .enter()
+                .append('rect')
+                .attr('class', 'bar')
+                .attr('x', d => xScale(d[0]))
+                .attr('y', d => yScale(d[1]))
+                .attr('width', xScale.bandwidth())
+                .attr('height', d => height - yScale(d[1]))
+                .attr('fill', 'steelblue')
+                .on('click', function(event, d) {
+                    const color = getRandomColor();  // Auto-assign a random color
+                    const existingBar = selectedBars.find(bar => bar.value === d[0]);
+                    if (existingBar) {
+                        existingBar.color = color;
+                    } else {
+                        const selectedCarIds = data.filter(row => row[variable] === d[0]).map(row => row.car_ID);
+                        console.log(`Selected car_IDs for category ${d[0]}: `, selectedCarIds);
+                        selectedBars.push({ value: d[0], color: color, rows: selectedCarIds });
+                    }
+                    d3.select(this).attr('fill', color);
+                    d3.select('#warning').html('');
+                    updateLegend();
+                    updateBiplotHighlighting();
+                    updateMDSHighlighting();
+                    updateParallelCoordinatesColors();
+                });
+
+            chart.append('g')
+                .attr('transform', `translate(0,${height})`)
+                .call(d3.axisBottom(xScale));
+            chart.append('g')
+                .call(d3.axisLeft(yScale));
+        }
+
+
+        function createHistogram(chart, data, variable, width, height) {
+            const xScale = d3.scaleLinear()
+                .domain(d3.extent(data, d => +d[variable]))
+                .range([0, width]);
+
+            const histogram = d3.histogram()
+                .value(d => +d[variable])
+                .domain(xScale.domain())
+                .thresholds(xScale.ticks(10));
+
+            const bins = histogram(data);
+
+            const yScale = d3.scaleLinear()
+                .domain([0, d3.max(bins, d => d.length)])
+                .range([height, 0]);
+
+            chart.selectAll('.bar')
+                .data(bins)
+                .enter()
+                .append('rect')
+                .attr('class', 'bar')
+                .attr('x', d => xScale(d.x0))
+                .attr('y', d => yScale(d.length))
+                .attr('width', d => xScale(d.x1) - xScale(d.x0) - 1)
+                .attr('height', d => height - yScale(d.length))
+                .attr('fill', 'steelblue')
+                .on('click', function(event, d) {
+                    const color = getRandomColor();  // Auto-assign a random color
+                    const binLabel = `${d.x0}-${d.x1}`;
+                    const existingBar = selectedBars.find(bar => bar.value === binLabel);
+                    if (existingBar) {
+                        existingBar.color = color;
+                    } else {
+                        const isLastBin = d.x1 === bins[bins.length - 1].x1;
+                        const selectedCarIds = data.filter(row => +row[variable] >= d.x0 && (isLastBin ? +row[variable] <= d.x1 : +row[variable] < d.x1)).map(row => row.car_ID);
+                        console.log(`Selected car_IDs for bin ${binLabel}: `, selectedCarIds);
+                        selectedBars.push({ value: binLabel, color: color, rows: selectedCarIds });
+                    }
+                    d3.select(this).attr('fill', color);
+                    d3.select('#warning').html('');
+                    updateLegend();
+                    updateMDSHighlighting();
+                    updateBiplotHighlighting();
+                    updateParallelCoordinatesColors();
+                });
+
+            chart.append('g')
+                .attr('transform', `translate(0,${height})`)
+                .call(d3.axisBottom(xScale));
+            chart.append('g')
+                .call(d3.axisLeft(yScale));
+        }
+
+        function getRandomColor() {
+            const letters = '0123456789ABCDEF';
+            let color = '#';
+            for (let i = 0; i < 6; i++) {
+                color += letters[Math.floor(Math.random() * 16)];
+            }
+            return color;
+        }
+
+    
+        function updateLegend() {
+            const legend = d3.select('#legend');
+            legend.selectAll('.legend-item').remove();
+            selectedBars.forEach(d => {
+                const item = legend.append('div')
+                    .attr('class', 'legend-item');
+                item.append('span')
+                    .attr('class', 'legend-color')
+                    .style('background-color', d.color);
+                item.append('span')
+                    .text(d.value);
+            });
+        }
+    
+        function updateBiplotHighlighting() {
+            d3.csv('biplot_scores.csv').then(biplotData => {
+                const selectedIds = new Set();
+                selectedBars.forEach(bar => {
+                    bar.rows.forEach(id => selectedIds.add(id));
+                });
+    
+                console.log("Selected car_IDs for highlighting: ", Array.from(selectedIds));
+    
+                d3.selectAll('.dot').attr('fill', function(d) {
+                    const point = selectedBars.find(bar => bar.rows.includes(d.car_ID));
+                    const fillColor = point ? point.color : 'blue';
+                    console.log(`Biplot point car_ID ${d.car_ID} color: `, fillColor);
+                    return fillColor;
+                });
+            });
+        }
+    
+        function createBiplot() {
+            d3.csv('biplot_scores.csv').then(data => {
+                d3.csv('biplot_loadings.csv').then(loadingsData => {
+                    d3.csv('explained_variance.csv').then(varianceData =>{
+                    const margin = { top: 40, right: 30, bottom: 60, left: 50 };
+                    const width = 800 - margin.left - margin.right;
+                    const height = 600 - margin.top - margin.bottom;
+
+                    const x = d3.scaleLinear().range([0, width]);
+                    const y = d3.scaleLinear().range([height, 0]);
+
+                    const xAxis = d3.axisBottom(x);
+                    const yAxis = d3.axisLeft(y);
+
+                    const svg = d3.select("#biplot-container").append("svg")
+                        .attr("width", width + margin.left + margin.right)
+                        .attr("height", height + margin.top + margin.bottom)
+                        .append("g")
+                        .attr("transform", "translate(" + margin.left + "," + margin.top + ")");
+
+                    x.domain(d3.extent(data, d => +d.PC1)).nice();
+                    y.domain(d3.extent(data, d => +d.PC2)).nice();
+                    
+                    svg.append("text")
+                        .attr("x", (width / 2))
+                        .attr("y", 0 - (margin.top / 2))
+                        .attr("text-anchor", "middle")
+                        .style("font-size", "16px")
+                        .style("text-decoration", "underline")
+                        .text("Biplot");
+
+                    svg.append("g")
+                        .attr("class", "x axis")
+                        .attr("transform", "translate(0," + height + ")")
+                        .call(xAxis)
+                        .append("text")
+                        .attr("class", "label")
+                        .attr("x", width / 2)
+                        .attr("y", 40)
+                        .style("text-anchor", "middle")
+                        .text("Principal Component 1");
+
+                    svg.append("g")
+                        .attr("class", "y axis")
+                        .call(yAxis)
+                        .append("text")
+                        .attr("class", "label")
+                        .attr("transform", "rotate(-90)")
+                        .attr("x", -height / 2)
+                        .attr("y", -40)
+                        .attr("dy", ".71em")
+                        .style("text-anchor", "middle")
+                        .text("Principal Component 2");
+
+                    const variancePC1 = (varianceData[0].Variance *100).toFixed(2);
+                    const variancePC2 = (varianceData[1].Variance *100).toFixed(2);
+
+                    // X-axis label (positioned correctly below the axis)
+                    svg.append("text")
+                        .attr("class", "label")
+                        .attr("x", width / 2)
+                        .attr("y", height + margin.bottom - 10)
+                        .style("text-anchor", "middle")
+                        .style("font-size", "12px")
+                        .style("fill", "black")
+                        .text(`Principal Component 1 (${variancePC1}%)`);
+
+                    // Y-axis label (rotated)
+                    svg.append("text")
+                        .attr("class", "label")
+                        .attr("transform", "rotate(-90)")
+                        .attr("x", -height / 2)
+                        .attr("y", -40)
+                        .attr("dy", ".71em")
+                        .style("text-anchor", "middle")
+                        .style("font-size", "12px")
+                        .style("fill", "black")
+                        .text(`Principal Component 2 (${variancePC2}%)`);
+
+
+                    // Create tooltip
+                    const tooltip = createTooltip();
+
+                    // Create points with tooltip functionality
+                    svg.selectAll(".dot")
+                        .data(data)
+                        .enter().append("circle")
+                        .attr("class", "dot")
+                        .attr("r", 3.5)
+                        .attr("cx", d => x(d.PC1))
+                        .attr("cy", d => y(d.PC2))
+                        .attr("fill", "blue")
+                        .on("mouseover", function(event, d) {
+                            tooltip.transition()
+                                .duration(200)
+                                .style("opacity", .9);
+                            tooltip.html(`car_ID: ${d.car_ID}<br/>PC1: ${d.PC1}<br/>PC2: ${d.PC2}`)
+                                .style("left", (event.pageX + 5) + "px")
+                                .style("top", (event.pageY - 28) + "px");
+                        })
+                        .on("mouseout", function(d) {
+                            tooltip.transition()
+                                .duration(500)
+                                .style("opacity", 0);
+                        });
+
+                    // Add lines for PC1 and PC2 axes (principal component lines)
+                    // PC1 line (horizontal)
+                    svg.append("line")
+                        .attr("x1", 0)
+                        .attr("y1", y(0))
+                        .attr("x2", width)
+                        .attr("y2", y(0))
+                        .attr("stroke", "black")
+                        .attr("stroke-width", 1)
+                        .attr("stroke-opacity", 0.5)
+                        .attr("stroke-dasharray", "4,4");
+
+                    // PC2 line (vertical)
+                    svg.append("line")
+                        .attr("x1", x(0))
+                        .attr("y1", 0)
+                        .attr("x2", x(0))
+                        .attr("y2", height)
+                        .attr("stroke", "black")
+                        .attr("stroke-width", 1)
+                        .attr("stroke-opacity", 0.5)
+                        .attr("stroke-dasharray", "4,4");
+
+                    // Add loading vectors
+                    svg.selectAll(".loading")
+                        .data(loadingsData)
+                        .enter().append("line")
+                        .attr("class", "loading")
+                        .attr("x1", x(0))
+                        .attr("y1", y(0))
+                        .attr("x2", d => x(d.PC1 * 7))  
+                        .attr("y2", d => y(d.PC2 * 7))  // Scale vectors
+                        .attr("stroke", "black")
+                        .attr("stroke-width", 2)
+                        .attr("marker-end", "url(#arrow)")
+                        .on("mouseover", function(event, d) {
+                            tooltip.transition()
+                                .duration(200)
+                                .style("opacity", .9);
+                            tooltip.html(`Attribute: ${d.attribute}`)
+                                .style("left", (event.pageX + 5) + "px")
+                                .style("top", (event.pageY - 28) + "px");
+                        })
+                        .on("mouseout", function(d) {
+                            tooltip.transition()
+                                .duration(500)
+                                .style("opacity", 0);
+                        });
+
+                    // Define arrowheads for loading vectors source: copilot.com
+                    svg.append("defs").append("marker")
+                        .attr("id", "arrow")
+                        .attr("viewBox", "0 -5 10 10")
+                        .attr("refX", 5)
+                        .attr("refY", 0)
+                        .attr("markerWidth", 4)
+                        .attr("markerHeight", 4)
+                        .attr("orient", "auto")
+                        .append("path")
+                        .attr("d", "M0,-5L10,0L0,5")
+                        .attr("stroke", "black");
+
+                    updateBiplotHighlighting();
+                })});
+            });
+        }
+
+
+
+                function updateMDSHighlighting() {
+                    d3.csv('mds_scores.csv').then(mdsData => {
+                        const selectedIds = new Set();
+                        selectedBars.forEach(bar => {
+                            bar.rows.forEach(id => selectedIds.add(id));
+                        });
+
+                        console.log("Selected car_IDs for highlighting: ", Array.from(selectedIds));
+
+                        d3.selectAll('.mds-point').attr('fill', function(d) {
+                            const point = selectedBars.find(bar => bar.rows.includes(d.car_ID));
+                            const fillColor = point ? point.color : 'blue';
+                            console.log(`MDS point car_ID ${d.car_ID} color: `, fillColor);
+                            return fillColor;
+                        });
+                    });
+                }
+
+                function createMDSPlot() {
+                    d3.csv('mds_scores.csv').then(data => {
+                        const margin = { top: 80, right: 30, bottom: 60, left: 50 };
+                        const width = 800 - margin.left - margin.right;
+                        const height = 600 - margin.top - margin.bottom;
+
+                        const x = d3.scaleLinear().range([0, width]);
+                        const y = d3.scaleLinear().range([height, 0]);
+
+                        const xAxis = d3.axisBottom(x);
+                        const yAxis = d3.axisLeft(y);
+
+                        const svg = d3.select("#mdsplots-container").append("svg")
+                            .attr("width", width + margin.left + margin.right)
+                            .attr("height", height + margin.top + margin.bottom)
+                            .append("g")
+                            .attr("transform", "translate(" + margin.left + "," + margin.top + ")");
+
+                        x.domain(d3.extent(data, d => +d.MDS1)).nice();
+                        y.domain(d3.extent(data, d => +d.MDS2)).nice();
+
+                        svg.append("text")
+                            .attr("x", (width/2))
+                            .attr("y", 0-(margin.top/2))
+                            .attr("text-anchor", "middle")
+                            .style("font-size","16px")
+                            .style("text-decoration","underline")
+                            .text("MDS plot")
+
+                        svg.append("g")
+                            .attr("class", "x axis")
+                            .attr("transform", "translate(0," + height + ")")
+                            .call(xAxis)
+                            .append("text")
+                            .attr("class", "label")
+                            .attr("x", width / 2)
+                            .attr("y", 40)
+                            .style("text-anchor", "middle")
+                            .text("MDS1");
+
+                        svg.append("g")
+                            .attr("class", "y axis")
+                            .call(yAxis)
+                            .append("text")
+                            .attr("class", "label")
+                            .attr("transform", "rotate(-90)")
+                            .attr("x", -height / 2)
+                            .attr("y", -40)
+                            .attr("dy", ".71em")
+                            .style("text-anchor", "middle")
+                            .text("MDS2");
+
+                        // X-axis label
+                        svg.append("text")
+                            .attr("class", "label")
+                            .attr("x", width / 2)  // Center the label on the X-axis
+                            .attr("y", height + 40)  // Move it below the X-axis
+                            .style("text-anchor", "middle")
+                            .style("font-size", "12px")
+                            .style("fill", "black")  // Ensure the label is visible
+                            .text("MDS1");
+
+
+                        // Y-axis label 
+                        svg.append("text")
+                            .attr("class", "label")
+                            .attr("transform", "rotate(-90)")  
+                            .attr("x", -height / 2) 
+                            .attr("y", -40)  
+                            .attr("dy", ".71em")  
+                            .style("text-anchor", "middle")
+                            .style("font-size", "12px")
+                            .style("fill", "black")  
+                            .text("MDS2");
+
+                        // Create tooltip
+                        const tooltip = createTooltip();
+
+                        // Create points with tooltip, Source Code: Copilot.com
+                        svg.selectAll(".mds-point")
+                            .data(data)
+                            .enter().append("circle")
+                            .attr("class", "mds-point")
+                            .attr("r", 3.5)
+                            .attr("cx", d => x(d.MDS1))
+                            .attr("cy", d => y(d.MDS2))
+                            .attr("fill", "blue")
+                            .on("mouseover", function(event, d) {
+                                tooltip.transition()
+                                    .duration(200)
+                                    .style("opacity", .9);
+                                tooltip.html(`car_ID: ${d.car_ID}<br/>MDS1: ${d.MDS1}<br/>MDS2: ${d.MDS2}`)
+                                    .style("left", (event.pageX + 5) + "px")
+                                    .style("top", (event.pageY - 28) + "px");
+                            })
+                            .on("mouseout", function(d) {
+                                tooltip.transition()
+                                    .duration(500)
+                                    .style("opacity", 0);
+                            });
+
+                        // Call the function to update MDS highlighting
+                        updateMDSHighlighting();
+                    });
+                }
+
+                function updateParallelCoordinatesColors() {
+                    d3.csv('parallel_coordinates.csv').then(data => {
+                        const selectedIds = new Set();
+                        selectedBars.forEach(bar => {
+                            bar.rows.forEach(id => selectedIds.add(id));
+                        });
+
+                        console.log("Selected car_IDs for highlighting: ", Array.from(selectedIds));
+
+                        data.forEach(d => {
+                            const carId = d.car_ID;
+                            const line = d3.select(`.line.car_${carId}`);
+                            const point = selectedBars.find(bar => bar.rows.includes(carId));
+                            const fillColor = point ? point.color : 'steelblue';
+                            line.attr("stroke", fillColor).attr("opacity", point ? 1 : 0.3);
+                            console.log(`Parallel Coordinates line car_ID ${carId} color: `, fillColor);
+                        });
+                    });
+                }
+
+
+
+                function createParallelCoordinates() {
+                    d3.csv('parallel_coordinates.csv').then(data => {
+                        const margin = { top: 62, right: 50, bottom: 10, left: 10 };
+                        const width = 850 - margin.left - margin.right;
+                        const height = 550 - margin.top - margin.bottom;
+
+                        const svg = d3.select("#parallel-coordinates").append("svg")
+                            .attr("width", width + margin.left + margin.right)
+                            .attr("height", height + margin.top + margin.bottom)
+                            .append("g")
+                            .attr("transform", "translate(" + margin.left + "," + margin.top + ")");
+
+                        const dimensions = ['wheelbase', 'carlength', 'carwidth', 'carheight', 'curbweight', 
+                                            'enginesize', 'horsepower', 'highwaympg'];
+
+                        const y = {};
+                        dimensions.forEach(d => {
+                            y[d] = d3.scaleLinear()
+                                .domain(d3.extent(data, p => +p[d]))
+                                .range([height, 0]);
+                        });
+
+                        const x = d3.scalePoint()
+                            .range([0, width])
+                            .padding(1)
+                            .domain(dimensions);
+
+                        function path(d) {
+                            return d3.line()(dimensions.map(p => [x(p), y[p](d[p])]));
+                        }
+
+                        svg.selectAll("myPath")
+                            .data(data)
+                            .enter().append("path")
+                            .attr("class", "line")
+                            .attr("d", path)
+                            .attr("stroke", "steelblue")
+                            .attr("fill", "none")
+                            .attr("opacity", 0.3)
+                            .attr("class", d => `line car_${d.car_ID}`);
+
+                        svg.selectAll("myAxis")
+                            .data(dimensions).enter()
+                            .append("g")
+                            .attr("class", "axis")
+                            .attr("transform", d => "translate(" + x(d) + ")")
+                            .each(function(d) { d3.select(this).call(d3.axisLeft().scale(y[d])); })
+                            .append("text")
+                            .style("text-anchor", "middle")
+                            .attr("y", -9)
+                            .text(d => d)
+                            .style("fill", "black");
+
+                        // Add title to the Parallel Coordinates plot
+                        svg.append("text")
+                            .attr("x", (width / 2))             
+                            .attr("y", -40 )
+                            .attr("text-anchor", "middle")  
+                            .style("font-size", "16px") 
+                            .style("text-decoration", "underline")  
+                            .text("Parallel Coordinates Plot");
+
+                        updateParallelCoordinatesColors();  // Ensure this function is called to set initial colors
+                    });
+                }
+
+               //initalize every graph
+                createBiplot();
+                createMDSPlot();
+                createParallelCoordinates();
+                </script>
+                </body>
+                </html>
