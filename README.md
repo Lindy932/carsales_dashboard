@@ -38,6 +38,7 @@ Each lab builds on the previous one, starting with simple charts and growing int
 ### 📈 **Lab 4 – Linked Car Sales Dashboard Suite: Coordinated Multiple Views**
 
 -  Created an interconnected dashboard system with four synchronized visualizations (scatterplots, bar charts, pie charts, and histograms). Enabled dynamic linking—changing filters in one chart automatically updated all others. Focused on visual storytelling of car sales trends across variables like income, fuel type, transmission, and company to support executive-level data exploration.
+-  **Note:** Press Shift Key to De-Select and Multi-Select Variables 
 
 ---
 
