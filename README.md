@@ -24,7 +24,7 @@ Keywords: Python, Product Segmentation, Machine Learning
 
 ---
 
-### 📊 **Lab 2 – Multivariate Analytics: PCA, MDS & Parallel Coordinates**
+### 📊 **Lab 2 – Product Segmentation and Dimensional Reduction: PCA, MDS & Parallel Coordinates**
 
 - Built a web-based analytical interface to uncover deeper multivariate relationships in the car sales dataset. Implemented correlation matrices, scatterplot matrices, parallel coordinate plots, Principal Component Analysis (PCA) with scree plots and biplots, and Multidimensional Scaling (MDS) displays. Empowered users to visually analyze feature interdependencies and reduce dimensionality for better insights. Data was cleaned, standardized, and clustered using Python, with processed CSVs generated advanced visual analyses.
 
