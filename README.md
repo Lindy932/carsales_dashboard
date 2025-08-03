@@ -17,36 +17,52 @@ Each lab builds on the previous one, starting with simple charts and growing int
 
 Keywords: Python, Product Segmentation, Machine Learning 
 
-
 ---
 
-### ✅ **Overall Summary: Key Data Insights & Business Relevance Actions**
 
-1. **Analyzed Correlations**
-   - Curb weight negatively impacts fuel efficiency*, and *car dimensions correlate with each other.
-   - Action: Segment cars by weight to target fuel-conscious vs. performance buyers.
+## 🔍 Key Insights
 
-2. **Applied PCA & Biplot for Dimensionality Reduction**
-   - engine size, horsepower, and curb weight drive variance; fuel-efficient cars cluster clearly.
-   - Action: Use PCA to group similar cars for streamlined feature comparisons.
+* **Fuel efficiency drops as car weight increases**
+  Curb weight shows a strong negative correlation with highway MPG across all models. Heavier cars are consistently less fuel-efficient.
 
-3. **Used Parallel Coordinates for Attribute Profiling**
-   - 4-cylinder cars are light, efficient*; 8-cylinder cars are powerful but fuel-hungry.
-   - Action: Align marketing by performance tier (economy, balanced, premium).
+* **Cylinder count strongly reflects car class**
 
-4. **Explored K-Means Clustering (k=4)**
-   - Segmented cars into clear groups: efficient compacts vs. powerful SUVs, with *car height as a major differentiator*.
-   ✔ Action: Use clusters to personalize promotions based on buyer preferences.
+  * 4-cylinder cars are lightweight, highly fuel-efficient, and tightly clustered.
+  * 6-cylinder cars balance power and efficiency.
+  * 8-cylinder cars are large, high-performance, but fuel-consuming.
 
-5. **Interactive Filtering: Horsepower vs. Price by Body Type**
-   - Positive price-power correlation*; sedans command higher \$/HP than hatchbacks.
-   - Action: Inform dynamic pricing and position sedans as performance upgrades.
+* **Horsepower significantly impacts pricing**
+  There's a clear upward trend in price as horsepower increases across all body types.
 
-6. **Mapped Body Type to Drive Type (Chord Diagram)**
-   Sedans/wagons strongly link to Four Wheel Drive, distinguishing them from other car types.
-   - Action: Leverage drive-type exclusivity for targeted urban/suburban marketing.
+  * Sedans have the steepest slope → higher price per HP.
+  * Hatchbacks have the shallowest slope → practical and budget-friendly.
 
+* **Clustering reveals distinct vehicle segments**
+  K-Means clustering identifies 4 main groups:
 
+  * Compact, efficient cars
+  * Balanced midsize models
+  * High-performance, large vehicles (e.g., SUVs)
+  * Variants in between
+    Car height emerges as a key feature differentiating these groups.
+
+* **High-priced cars prioritize efficiency-focused design**
+  Vehicles in the top price tier tend to have taller builds, smaller dimensions, lower curb weight, and higher MPG.
+  Lower-priced cars are longer, wider, and less fuel-efficient.
+
+* **Drive type is specialized by body style**
+  Sedans and wagons almost exclusively use front-wheel drive, indicating a strong design intent for urban/suburban use with better fuel control and handling.
+
+## 💼 Business Actions
+
+* **Target 4-cylinder models** to fuel-conscious, urban buyers.
+* **Price sedans at a premium** for higher horsepower value.
+* **Market hatchbacks** as cost-effective, practical options.
+* **Segment inventory** using cluster insights to match buyer personas.
+* **Highlight FWD sedans and wagons** for city-focused marketing.
+* **Use weight and height patterns** to guide pricing and design decisions.
+
+---
 
 ### 🚗 **Lab 1 – Exploratory Car Sales Dashboard: Basic Categorical & Numerical Analysis**
 
