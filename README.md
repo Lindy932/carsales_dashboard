@@ -34,8 +34,8 @@ Keywords: Python, Product Segmentation, Machine Learning
 * **Horsepower significantly impacts pricing**
   There's a clear upward trend in price as horsepower increases across all body types.
 
-  * Sedans have the steepest slope → higher price per HP.
-  * Hatchbacks have the shallowest slope → practical and budget-friendly.
+  * Sedans have the steepest slope which indicates higher price per horse power.
+  * Hatchbacks have the shallowest slope which indicates practical and budget-friendly option.
 
 * **Clustering reveals distinct vehicle segments**
   K-Means clustering identifies 4 main groups:
