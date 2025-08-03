@@ -1,6 +1,6 @@
 # 🚖  Car Sales Dataset Advanced Visualization Dashboard
 
-This academic project is a multi-part interactive dashboard series that explores car sales trends and key product segmentation. Using real-world-style data, I built a set of web-based tools to help users better understand patterns in vehicle features, buyer preferences, and market trends.
+This academic project is a multi-part interactive dashboard series that explores car sales trends and key customer segmentation. Using real-world-style data, I built a set of web-based tools to help users better understand patterns in vehicle features, buyer preferences, and market trends.
 
 Each lab builds on the previous one, starting with simple charts and growing into full dashboards with dynamic filters, clustering, and linked visualizations. These tools are designed to help users ask deeper questions and get quick, visual answers from the data, whether or not if they’re marketing teams, analysts, or business leaders.
 
