@@ -80,7 +80,7 @@ Keywords: Python, Product Segmentation, Machine Learning
 <p align="center"><img width="231" height="362" alt="Screen Shot 2025-07-31 at 1 25 47 AM" src="https://github.com/user-attachments/assets/3a32d965-f14b-4772-8492-ace7e6189543" /></p>
 <p align="center"><img width="327" height="340" alt="Screen Shot 2025-07-31 at 1 25 58 AM" src="https://github.com/user-attachments/assets/4dfdcdc2-aa79-43a3-938b-2a945eef5ca2" /></p>
 
-### Key Insights & Business Relevance
+### Insights
 
 #### 1. **Curb Weight is a Key Driver of Efficiency and Performance**
 
@@ -134,7 +134,7 @@ Keywords: Python, Product Segmentation, Machine Learning
 
 
 
-#### Takeaways 
+### Takeaways 
 
 We can:
 
